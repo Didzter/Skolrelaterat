@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+
+<script>
+	var state;
+	var fps;
+	var lastLoop = new Date;
+	var lastRun;
+	var renderstart;
+	var elapsed;
+	var lista;
+	var start;
+	var delta;
+	var delay;
+	var running;
+	var delayRound;
+	localStorage.setItem('avgfps','');
+function createState(){
+	state = 1;
+}
+
+function editState(){
+	state = 2;
+}
+
+function undoState(){
+	state = 3;
+}
+
+	var lastframe=0;
+	function fpsLoop(){
+		delay = performance.now()-lastframe;
+		if(running) {
+			lista = localStorage.getItem('avgfps');
+			delayRound = Math.round(delay*1000)/1000;
+			lista+=", "+delayRound;
+			localStorage.setItem('avgfps', lista);		
+		}
+			lastframe = performance.now();
+			requestAnimationFrame(fpsLoop);
+	}	
+	
+	function clearStorage(){
+	localStorage.clear();
+	alert("LocalStorage cleared!");
+	localStorage.setItem('avgfps','');
+	}
+</script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/processing.js/1.6.6/processing.min.js"></script>
+<script type="text/processing" data-processing-target="mycanvas">
+float bx;
+float by;
+int circleDiameter = 25;
+ArrayList<Circle> circleList;
+ArrayList<Line> lineList;
+var lista;
+boolean locked = false;
+Circle selectedCircle;
+Circle previousCircle = null;
+
+void setup() {
+  circleList = new ArrayList<Circle>();
+  lineList = new ArrayList<Line>();
+  size(800, 800);
+  stroke(200);
+  ellipseMode(RADIUS);
+}	
+	
+void draw(){
+  background(0);
+
+  for(Circle c : circleList){
+    c.create();
+  }
+  for(Line l : lineList){
+    l.create();
+  }
+  
+}
+	
+void mousePressed() {
+    if(state == 1){
+      for(Circle c : circleList){
+        if(checkCircle(c)){
+         return;   
+        }
+       }
+	   renderStart = performance.now();
+      Circle newCircle = new Circle(mouseY,mouseX,circleDiameter);
+      circleList.add(newCircle);
+      if(previousCircle != null){
+        lineList.add(new Line(mouseY,mouseX,previousCircle.ypos,previousCircle.xpos,previousCircle,newCircle));
+      }
+      previousCircle = newCircle;
+	  elapsed = performance.now()-renderStart;
+	  console.log(elapsed + 'ms');
+	  document.getElementById("circles").innerHTML=circleList.size();
+  }
+  else if(state == 2){
+	running = true;
+	setTimeout(function(){ running = false;}, 10000);
+    for(Circle c : circleList){
+      if(checkCircle(c)){	  
+        selectedCircle = c;
+		fill(150);
+        locked = true;  	
+      }
+      else locked = false; 	  
+    }	  
+	  }
+  else if(state == 3){
+    for(Circle c : circleList){
+      if(checkCircle(c)){
+	  renderStart = performance.now();
+        for(Line l : lineList){
+          if(l.from == c | l.to == c){
+            lineList.remove(l);
+          }
+       }
+        circleList.remove(c);
+		elapsed = performance.now()-renderStart;
+      }
+    }
+  }
+}
+void mouseDragged() {
+var start = performance.now();
+  if(locked) {
+    for(Line l : lineList){
+      if(l.from == selectedCircle){
+        l.ypos1 = mouseY;
+        l.xpos1 = mouseX;
+        l.ypos2 = l.to.ypos;
+        l.xpos2 = l.to.xpos;
+      }
+      if(l.to == selectedCircle){
+        l.ypos1 = l.from.ypos;
+        l.xpos1 = l.from.xpos;
+        l.ypos2 = mouseY;
+        l.xpos2 = mouseX;
+      }
+    }
+    selectedCircle.xpos = mouseX; 
+    selectedCircle.ypos = mouseY; 
+  }
+}
+
+void mouseReleased() {
+ running = false;
+  locked = false;
+  fill(200);
+}
+
+Boolean checkCircle(Circle c){
+  if(mouseX > c.xpos-c.diameter&& mouseX < c.xpos+c.diameter && 
+     mouseY > c.ypos-c.diameter && mouseY < c.ypos+c.diameter){
+       return true;   
+      }
+   else return false;
+}
+
+class Line {
+  float ypos1, xpos1, ypos2, xpos2;
+  Circle from, to;
+  Line (float y1, float x1, float y2, float x2, Circle c1, Circle c2){
+    ypos1 = y1;
+    xpos1 = x1;
+    ypos2 = y2;
+    xpos2 = x2;
+    from = c1;
+    to = c2;
+  }
+  void create(){
+    line(xpos1,ypos1,xpos2,ypos2);
+  }
+}
+
+class Circle {
+  float ypos, xpos, diameter;
+  Circle (float y, float x, float d){
+    ypos = y;
+    xpos = x;
+    diameter = d;
+  }
+  void create(){
+    ellipse(xpos, ypos, diameter, diameter);
+  }
+}
+</script>
+</head>
+ <body onLoad=fpsLoop();>
+	<div id="fps"></div>
+	<div id="circles"></div>
+		<button id="create" onclick=createState();>Create</button><button id="edit" onclick=editState();>Edit</button><button id="undo" onclick=undoState();>Undo</button><button onclick="alert(localStorage.getItem('avgfps'));">Check</button><button onclick="clearStorage();;">Clear</button><br>
+	<canvas id="mycanvas"></canvas>	
+	</body>
+	</html>

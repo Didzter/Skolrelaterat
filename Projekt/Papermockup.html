@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script>
+	var uistate = "null";
+	var lastRun;
+	var renderStart;
+	var elapsed;
+	var minFPS = 1000;
+	var lista;
+	var start;
+	var delta;
+	var delay;
+	var delayRound;
+	var running;
+	localStorage.setItem('avgfps','');
+	function createstate()
+	{
+			uistate='create';
+	}
+	
+	function editstate()
+	{
+			uistate='edit';
+	}
+	
+	function undostate()
+	{			
+				uistate='undo';		
+	}
+	var lastframe=0;
+	function fpsLoop(){
+		
+		delay = performance.now()-lastframe;
+		if(running) {
+			lista = localStorage.getItem('avgfps');
+			delayRound = Math.round(delay*1000)/1000;
+			lista+=", "+delayRound;
+			localStorage.setItem('avgfps', lista);			
+		}		
+		lastframe = performance.now();
+			requestAnimationFrame(fpsLoop);
+	}	
+	
+	function clearStorage(){
+	localStorage.clear();
+	alert("LocalStorage cleared!");
+	localStorage.setItem('avgfps','');
+	}
+	
+</script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.10.3/paper-full.js"></script>
+<script type="text/paperscript" canvas="myCanvas">
+	var circle;
+	var oldcircle;
+	
+function onMouseDown(event) {
+	if(uistate=="create"){
+	var fore = 0;
+	var efter;
+			oldcircle=circle;			
+			circle = new Path.Circle({
+				center: event.point,
+				radius: 25
+			});
+			circle.fillColor = 'black';		
+			circle.onMouseDown = function(event) {
+			    this.fillColor = 'red';			
+			}
+			circle.onMouseDrag = function(event) {
+				running = true;
+				setTimeout(function(){ running = false;}, 10000);
+			    this.fillColor = 'green';
+			    this.position = event.point;	
+				
+			}
+			circle.onMouseUp = function(event) {
+			running = false;
+			renderStart = performance.now();
+					this.fillColor = {
+					    gradient: {
+					        stops: [['yellow', 0.05], ['red', 0.2], ['black', 1]],
+					        radial: true
+					    },
+					    origin: circle.position,
+					    destination: circle.bounds.rightCenter
+					};		
+				if (renderStart != 0){
+					elapsed = performance.now()-renderStart;
+					console.log(elapsed);
+				}
+			}
+			var r1cent = oldcircle.bounds.center;
+			var r2cent = circle.bounds.center;
+			var connector = new Path(r1cent, r2cent); 
+			connector.strokeColor = 'black';		
+	}
+	else if(uistate=="undo"){
+		project.activeLayer.lastChild.remove();
+		project.activeLayer.lastChild.remove();
+	}	
+}
+</script>	
+</head>
+<body onLoad=fpsLoop();>
+	<div id="fps"></div>
+	<div id="circles"></div>
+	<button onclick="createstate();">Create</button><button onclick="editstate();">Edit</button><button onclick="undostate();">Undo</button><button onclick="alert(localStorage.getItem('avgfps'));">Check</button><button onclick="clearStorage();">Clear</button><br>
+	<canvas style="border:1px solid red;" id="myCanvas" width="800" height="800"></canvas>
+</body>
+</html>
